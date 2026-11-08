@@ -1,0 +1,62 @@
+# user service — traces (OTLP push), metrics (/metrics scrape), logs (JSON stdout tail).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user
+  namespace: roboshop
+  labels: { app: user }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: user }
+  template:
+    metadata:
+      labels:
+        app: user
+        log_format: json
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "8001"
+    spec:
+      enableServiceLinks: false
+      containers:
+        - name: user
+          image: public.ecr.aws/w8x4g9h7/roboshop-v3/user:1.0.0
+          imagePullPolicy: Always
+          ports:
+            - { containerPort: 8001 }
+          env:
+            - { name: MONGO_URL, value: "mongodb://mongodb:27017/users" }
+            - { name: JWT_SECRET, value: "roboshop-secret-key" }
+            - { name: PORT, value: "8001" }
+            - { name: OTEL_SERVICE_NAME, value: "user" }
+            - { name: OTEL_EXPORTER_OTLP_ENDPOINT, value: "http://otel-collector.obs.internal:4317" }
+            - { name: OTEL_EXPORTER_OTLP_PROTOCOL, value: "grpc" }
+            - { name: OTEL_TRACES_EXPORTER, value: "otlp" }
+            - { name: OTEL_METRICS_EXPORTER, value: "none" }
+            - { name: OTEL_LOGS_EXPORTER, value: "none" }
+            - { name: OTEL_RESOURCE_ATTRIBUTES, value: "service.namespace=roboshop,deployment.environment=training" }
+          readinessProbe:
+            httpGet: { path: /health, port: 8001 }
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 30
+          livenessProbe:
+            httpGet: { path: /health, port: 8001 }
+            initialDelaySeconds: 60
+            periodSeconds: 20
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits:   { cpu: 500m, memory: 512Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: user
+  namespace: roboshop
+  labels: { app: user }
+spec:
+  selector: { app: user }
+  ports:
+    - { name: http, port: 8001, targetPort: 8001 }

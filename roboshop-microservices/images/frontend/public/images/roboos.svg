@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <rect width="200" height="200" fill="#1a365d"/>
+  <g transform="translate(35,30)">
+    <!-- Terminal window -->
+    <rect x="10" y="15" width="110" height="85" rx="8" fill="#0f172a" stroke="#334155" stroke-width="2"/>
+    <!-- Title bar -->
+    <rect x="10" y="15" width="110" height="18" rx="8" fill="#334155"/>
+    <rect x="10" y="25" width="110" height="8" fill="#334155"/>
+    <circle cx="22" cy="24" r="4" fill="#ef4444"/>
+    <circle cx="34" cy="24" r="4" fill="#f59e0b"/>
+    <circle cx="46" cy="24" r="4" fill="#22c55e"/>
+    <!-- Code lines -->
+    <text x="18" y="48" fill="#22c55e" font-size="7" font-family="monospace">$ roboos start</text>
+    <text x="18" y="58" fill="#06b6d4" font-size="7" font-family="monospace">[OK] SLAM active</text>
+    <text x="18" y="68" fill="#06b6d4" font-size="7" font-family="monospace">[OK] Fleet sync</text>
+    <text x="18" y="78" fill="#a78bfa" font-size="7" font-family="monospace">Ready &gt; _</text>
+    <!-- Gear icon -->
+    <circle cx="95" cy="115" r="18" fill="none" stroke="#06b6d4" stroke-width="3"/>
+    <circle cx="95" cy="115" r="7" fill="#06b6d4"/>
+    <g stroke="#06b6d4" stroke-width="3" stroke-linecap="round">
+      <line x1="95" y1="94" x2="95" y2="100"/>
+      <line x1="95" y1="130" x2="95" y2="136"/>
+      <line x1="74" y1="115" x2="80" y2="115"/>
+      <line x1="110" y1="115" x2="116" y2="115"/>
+    </g>
+  </g>
+</svg>

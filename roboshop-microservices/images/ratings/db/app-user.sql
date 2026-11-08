@@ -1,0 +1,3 @@
+CREATE USER IF NOT EXISTS 'ratings'@'%' IDENTIFIED BY 'RoboShop@1';
+GRANT ALL PRIVILEGES ON ratings.* TO 'ratings'@'%';
+FLUSH PRIVILEGES;

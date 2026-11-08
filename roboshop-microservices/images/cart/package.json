@@ -1,0 +1,20 @@
+{
+  "name": "roboshop-cart",
+  "version": "1.0.0",
+  "description": "RoboShop Cart Service - Node.js/Express/Redis",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "redis": "^4.6.12",
+    "@opentelemetry/api": "^1.9.0",
+    "@opentelemetry/auto-instrumentations-node": "^0.52.0",
+    "express-prom-bundle": "^8.0.0",
+    "prom-client": "^15.1.3",
+    "pino-http": "^10.3.0"
+  }
+}

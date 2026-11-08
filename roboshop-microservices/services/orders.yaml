@@ -1,0 +1,66 @@
+# orders service — traces (OTLP push), metrics (/actuator/prometheus scrape), logs (JSON stdout tail).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: orders
+  namespace: roboshop
+  labels: { app: orders }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: orders }
+  template:
+    metadata:
+      labels:
+        app: orders
+        log_format: json
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/actuator/prometheus"
+        prometheus.io/port: "8007"
+    spec:
+      enableServiceLinks: false
+      containers:
+        - name: orders
+          image: public.ecr.aws/w8x4g9h7/roboshop-v3/orders:1.0.0
+          imagePullPolicy: Always
+          ports:
+            - { containerPort: 8007 }
+          env:
+            - { name: MONGO_URL, value: "mongodb://mongodb:27017/orders" }
+            - { name: AMQP_HOST, value: "rabbitmq" }
+            - { name: AMQP_USER, value: "roboshop" }
+            - { name: AMQP_PASS, value: "RoboShop@1" }
+            - { name: SHIPPING_URL, value: "http://shipping:8004" }
+            - { name: NOTIFICATION_URL, value: "http://notification:8008" }
+            - { name: PORT, value: "8007" }
+            - { name: OTEL_SERVICE_NAME, value: "orders" }
+            - { name: OTEL_EXPORTER_OTLP_ENDPOINT, value: "http://otel-collector.obs.internal:4317" }
+            - { name: OTEL_EXPORTER_OTLP_PROTOCOL, value: "grpc" }
+            - { name: OTEL_TRACES_EXPORTER, value: "otlp" }
+            - { name: OTEL_METRICS_EXPORTER, value: "none" }
+            - { name: OTEL_LOGS_EXPORTER, value: "none" }
+            - { name: OTEL_RESOURCE_ATTRIBUTES, value: "service.namespace=roboshop,deployment.environment=training" }
+          readinessProbe:
+            httpGet: { path: /health, port: 8007 }
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 30
+          livenessProbe:
+            httpGet: { path: /health, port: 8007 }
+            initialDelaySeconds: 60
+            periodSeconds: 20
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits:   { cpu: 500m, memory: 512Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: orders
+  namespace: roboshop
+  labels: { app: orders }
+spec:
+  selector: { app: orders }
+  ports:
+    - { name: http, port: 8007, targetPort: 8007 }

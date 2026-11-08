@@ -1,0 +1,20 @@
+# RoboShop UI via Traefik. external-dns creates roboshop.${DOMAIN} in the public zone; TLS is
+# terminated at the Traefik NLB (ACM). ${DOMAIN} is substituted at deploy time (make deploy DOMAIN=…).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: roboshop
+  namespace: roboshop
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: "roboshop.${DOMAIN}"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 80

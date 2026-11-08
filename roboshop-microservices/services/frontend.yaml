@@ -1,0 +1,48 @@
+# frontend — Next.js static site + nginx API gateway. Logs pillar: nginx JSON access log on stdout,
+# tailed by the node agent. The static tier has no app traces/metrics; traces begin at the backend
+# services it proxies to. Pod label log_format:json marks it for the log pipeline.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: roboshop
+  labels: { app: frontend }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: frontend }
+  template:
+    metadata:
+      labels:
+        app: frontend
+        log_format: json
+    spec:
+      enableServiceLinks: false
+      containers:
+        - name: frontend
+          image: public.ecr.aws/w8x4g9h7/roboshop-v3/frontend:1.0.0
+          imagePullPolicy: Always
+          ports:
+            - { containerPort: 80 }
+          readinessProbe:
+            httpGet: { path: /, port: 80 }
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /, port: 80 }
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          resources:
+            requests: { cpu: 50m,  memory: 64Mi }
+            limits:   { cpu: 500m, memory: 256Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: roboshop
+  labels: { app: frontend }
+spec:
+  selector: { app: frontend }
+  ports:
+    - { name: http, port: 80, targetPort: 80 }

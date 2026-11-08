@@ -1,0 +1,63 @@
+# shipping service — traces (OTLP push), metrics (/actuator/prometheus scrape), logs (JSON stdout tail).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shipping
+  namespace: roboshop
+  labels: { app: shipping }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: shipping }
+  template:
+    metadata:
+      labels:
+        app: shipping
+        log_format: json
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/actuator/prometheus"
+        prometheus.io/port: "8004"
+    spec:
+      enableServiceLinks: false
+      containers:
+        - name: shipping
+          image: public.ecr.aws/w8x4g9h7/roboshop-v3/shipping:1.0.0
+          imagePullPolicy: Always
+          ports:
+            - { containerPort: 8004 }
+          env:
+            - { name: DB_HOST, value: "mysql" }
+            - { name: DB_USER, value: "shipping" }
+            - { name: DB_PASS, value: "RoboShop@1" }
+            - { name: PORT, value: "8004" }
+            - { name: OTEL_SERVICE_NAME, value: "shipping" }
+            - { name: OTEL_EXPORTER_OTLP_ENDPOINT, value: "http://otel-collector.obs.internal:4317" }
+            - { name: OTEL_EXPORTER_OTLP_PROTOCOL, value: "grpc" }
+            - { name: OTEL_TRACES_EXPORTER, value: "otlp" }
+            - { name: OTEL_METRICS_EXPORTER, value: "none" }
+            - { name: OTEL_LOGS_EXPORTER, value: "none" }
+            - { name: OTEL_RESOURCE_ATTRIBUTES, value: "service.namespace=roboshop,deployment.environment=training" }
+          readinessProbe:
+            httpGet: { path: /health, port: 8004 }
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 30
+          livenessProbe:
+            httpGet: { path: /health, port: 8004 }
+            initialDelaySeconds: 60
+            periodSeconds: 20
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits:   { cpu: 500m, memory: 512Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: shipping
+  namespace: roboshop
+  labels: { app: shipping }
+spec:
+  selector: { app: shipping }
+  ports:
+    - { name: http, port: 8004, targetPort: 8004 }

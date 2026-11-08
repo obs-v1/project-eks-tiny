@@ -1,0 +1,64 @@
+# notification service — traces (OTLP push), metrics (/metrics scrape), logs (JSON stdout tail).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification
+  namespace: roboshop
+  labels: { app: notification }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: notification }
+  template:
+    metadata:
+      labels:
+        app: notification
+        log_format: json
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "8008"
+    spec:
+      enableServiceLinks: false
+      containers:
+        - name: notification
+          image: public.ecr.aws/w8x4g9h7/roboshop-v3/notification:1.0.0
+          imagePullPolicy: Always
+          ports:
+            - { containerPort: 8008 }
+          env:
+            - { name: BREVO_API_KEY, value: "" }
+            - { name: FROM_EMAIL, value: "noreply@roboshop.demo" }
+            - { name: FROM_NAME, value: "RoboShop" }
+            - { name: PORT, value: "8008" }
+            - { name: OTEL_SERVICE_NAME, value: "notification" }
+            - { name: OTEL_EXPORTER_OTLP_ENDPOINT, value: "http://otel-collector.obs.internal:4317" }
+            - { name: OTEL_EXPORTER_OTLP_PROTOCOL, value: "grpc" }
+            - { name: OTEL_TRACES_EXPORTER, value: "otlp" }
+            - { name: OTEL_METRICS_EXPORTER, value: "none" }
+            - { name: OTEL_LOGS_EXPORTER, value: "none" }
+            - { name: OTEL_RESOURCE_ATTRIBUTES, value: "service.namespace=roboshop,deployment.environment=training" }
+            - { name: OTEL_PYTHON_LOG_CORRELATION, value: "true" }
+          readinessProbe:
+            httpGet: { path: /health, port: 8008 }
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 30
+          livenessProbe:
+            httpGet: { path: /health, port: 8008 }
+            initialDelaySeconds: 60
+            periodSeconds: 20
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits:   { cpu: 500m, memory: 512Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification
+  namespace: roboshop
+  labels: { app: notification }
+spec:
+  selector: { app: notification }
+  ports:
+    - { name: http, port: 8008, targetPort: 8008 }

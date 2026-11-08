@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  JSON logs to stdout (logs pillar). The node agent's filelog receiver tails the container log and
+  ships it to Loki. The OpenTelemetry Java agent (added in the Dockerfile) injects
+  trace_id/span_id/trace_flags into the logback MDC on every request; LogstashEncoder writes each
+  MDC key as a top-level JSON field, so Loki's trace_id derived field links the line to its Jaeger
+  trace (and tracesToLogsV2 links back). Mirrors the monolith/BankObs log format.
+-->
+<configuration>
+  <appender name="JSON" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+      <includeMdc>true</includeMdc>
+    </encoder>
+  </appender>
+  <root level="INFO">
+    <appender-ref ref="JSON"/>
+  </root>
+</configuration>

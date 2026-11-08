@@ -1,0 +1,3 @@
+CREATE USER IF NOT EXISTS 'shipping'@'%' IDENTIFIED BY 'RoboShop@1';
+GRANT ALL PRIVILEGES ON cities.* TO 'shipping'@'%';
+FLUSH PRIVILEGES;

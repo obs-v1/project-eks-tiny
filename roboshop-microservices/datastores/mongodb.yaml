@@ -1,0 +1,51 @@
+# MongoDB 7.0 — document store for the User service (users db) and Orders service (orders db).
+# No auth (lab); the container binds 0.0.0.0 inside the pod. Services connect at
+# mongodb://mongodb.roboshop.svc.cluster.local:27017/<db>.
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb
+  namespace: roboshop
+spec:
+  clusterIP: None
+  selector: { app: mongodb }
+  ports:
+    - { name: mongo, port: 27017, targetPort: 27017 }
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongodb
+  namespace: roboshop
+spec:
+  serviceName: mongodb
+  replicas: 1
+  selector:
+    matchLabels: { app: mongodb }
+  template:
+    metadata:
+      labels: { app: mongodb }
+    spec:
+      enableServiceLinks: false
+      containers:
+        - name: mongodb
+          image: mongo:7.0
+          ports:
+            - { containerPort: 27017 }
+          volumeMounts:
+            - { name: data, mountPath: /data/db }
+          readinessProbe:
+            exec:
+              command: ["mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits:   { cpu: "1",  memory: 1Gi }
+  volumeClaimTemplates:
+    - metadata: { name: data }
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: gp3
+        resources:
+          requests: { storage: 5Gi }

@@ -1,0 +1,39 @@
+# k6 traffic injector. The journey.js script is supplied via the `loadgen-script` ConfigMap
+# (created by `make load` from loadgen/journey.js). Scale/stop with:
+#   make load            # start (5 VUs, in-cluster frontend)
+#   make load VUS=15     # heavier
+#   make load-stop       # stop
+# or directly: kubectl -n roboshop scale deploy/loadgen --replicas=0
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loadgen
+  namespace: roboshop
+  labels: { app: loadgen }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: loadgen }
+  template:
+    metadata:
+      labels: { app: loadgen }
+    spec:
+      enableServiceLinks: false
+      restartPolicy: Always
+      containers:
+        - name: k6
+          image: grafana/k6:0.49.0
+          args: ["run", "/scripts/journey.js"]
+          env:
+            - { name: BASE_URL, value: "http://frontend.roboshop.svc.cluster.local" }
+            - { name: VUS,      value: "5" }
+            - { name: DURATION, value: "24h" }
+          volumeMounts:
+            - { name: script, mountPath: /scripts }
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits:   { cpu: 500m, memory: 256Mi }
+      volumes:
+        - name: script
+          configMap:
+            name: loadgen-script

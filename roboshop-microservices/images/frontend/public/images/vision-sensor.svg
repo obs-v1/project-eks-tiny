@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <rect width="200" height="200" fill="#1a365d"/>
+  <g transform="translate(40,40)">
+    <!-- Camera body -->
+    <rect x="15" y="30" width="90" height="60" rx="8" fill="#475569"/>
+    <rect x="20" y="35" width="80" height="50" rx="6" fill="#334155"/>
+    <!-- Lens array - 3 cameras -->
+    <circle cx="40" cy="55" r="14" fill="#1e293b" stroke="#06b6d4" stroke-width="2"/>
+    <circle cx="40" cy="55" r="8" fill="#0f172a"/>
+    <circle cx="40" cy="55" r="4" fill="#06b6d4" opacity="0.8"/>
+    <circle cx="75" cy="45" r="8" fill="#1e293b" stroke="#22d3ee" stroke-width="1.5"/>
+    <circle cx="75" cy="45" r="4" fill="#22d3ee" opacity="0.6"/>
+    <circle cx="75" cy="65" r="6" fill="#1e293b" stroke="#ef4444" stroke-width="1.5"/>
+    <circle cx="75" cy="65" r="3" fill="#ef4444" opacity="0.6"/>
+    <!-- Status LED -->
+    <circle cx="25" cy="38" r="2" fill="#22c55e"/>
+    <!-- IR emitter dots -->
+    <circle cx="95" cy="40" r="2" fill="#a78bfa" opacity="0.5"/>
+    <circle cx="95" cy="50" r="2" fill="#a78bfa" opacity="0.5"/>
+    <circle cx="95" cy="60" r="2" fill="#a78bfa" opacity="0.5"/>
+    <!-- Scan lines -->
+    <path d="M20 100 L60 85 L100 100" stroke="#06b6d4" stroke-width="1" opacity="0.4" fill="none"/>
+    <path d="M25 108 L60 95 L95 108" stroke="#06b6d4" stroke-width="1" opacity="0.2" fill="none"/>
+  </g>
+</svg>

@@ -1,0 +1,64 @@
+# catalogue service — traces (OTLP push), metrics (/metrics scrape), logs (JSON stdout tail).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: catalogue
+  namespace: roboshop
+  labels: { app: catalogue }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: catalogue }
+  template:
+    metadata:
+      labels:
+        app: catalogue
+        log_format: json
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "8002"
+    spec:
+      enableServiceLinks: false
+      containers:
+        - name: catalogue
+          image: public.ecr.aws/w8x4g9h7/roboshop-v3/catalogue:1.0.0
+          imagePullPolicy: Always
+          ports:
+            - { containerPort: 8002 }
+          env:
+            - { name: MYSQL_HOST, value: "mysql" }
+            - { name: MYSQL_USER, value: "catalogue" }
+            - { name: MYSQL_PASSWORD, value: "RoboShop@1" }
+            - { name: MYSQL_DATABASE, value: "catalogue" }
+            - { name: PORT, value: "8002" }
+            - { name: OTEL_SERVICE_NAME, value: "catalogue" }
+            - { name: OTEL_EXPORTER_OTLP_ENDPOINT, value: "http://otel-collector.obs.internal:4317" }
+            - { name: OTEL_EXPORTER_OTLP_PROTOCOL, value: "grpc" }
+            - { name: OTEL_TRACES_EXPORTER, value: "otlp" }
+            - { name: OTEL_METRICS_EXPORTER, value: "none" }
+            - { name: OTEL_LOGS_EXPORTER, value: "none" }
+            - { name: OTEL_RESOURCE_ATTRIBUTES, value: "service.namespace=roboshop,deployment.environment=training" }
+          readinessProbe:
+            httpGet: { path: /health, port: 8002 }
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 30
+          livenessProbe:
+            httpGet: { path: /health, port: 8002 }
+            initialDelaySeconds: 60
+            periodSeconds: 20
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits:   { cpu: 500m, memory: 512Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: catalogue
+  namespace: roboshop
+  labels: { app: catalogue }
+spec:
+  selector: { app: catalogue }
+  ports:
+    - { name: http, port: 8002, targetPort: 8002 }

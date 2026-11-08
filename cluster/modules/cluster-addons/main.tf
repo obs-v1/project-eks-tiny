@@ -30,9 +30,10 @@ resource "kubernetes_storage_class_v1" "gp3" {
   depends_on = [aws_eks_addon.ebs_csi]
 }
 
-# ── Cluster Autoscaler ───────────────────────────────────────────────────────
+# ── Cluster Autoscaler (OFF by default in round-1; see var.enable_cluster_autoscaler) ────────
 # helm provider 3.x: `set` is a list attribute, not repeated blocks.
 resource "helm_release" "cluster_autoscaler" {
+  count      = var.enable_cluster_autoscaler ? 1 : 0
   name       = "cluster-autoscaler"
   repository = "https://kubernetes.github.io/autoscaler"
   chart      = "cluster-autoscaler"
@@ -50,12 +51,12 @@ resource "helm_release" "cluster_autoscaler" {
 }
 
 # ── external-dns (ingress + service sources; public UIs + private collector) ──
+# Chart is VENDORED locally (charts/external-dns) instead of pulled from GitHub Releases, whose
+# CDN 504s intermittently and would otherwise fail `terraform apply`. Chart version 1.23.0.
 resource "helm_release" "external_dns" {
-  name       = "external-dns"
-  repository = "https://kubernetes-sigs.github.io/external-dns"
-  chart      = "external-dns"
-  version    = "1.23.0"
-  namespace  = "kube-system"
+  name      = "external-dns"
+  chart     = "${path.module}/charts/external-dns"
+  namespace = "kube-system"
 
   set = concat([
     { name = "provider.name", value = "aws" },

@@ -1,0 +1,40 @@
+# Valkey 8 (Redis-compatible) — in-memory store for Cart sessions (1h TTL). Sessions are
+# ephemeral, so no persistence: a restart just drops carts. Cart connects at redis://valkey:6379
+# (REDIS_HOST=valkey). Protocol-identical to Redis, so no app change.
+apiVersion: v1
+kind: Service
+metadata:
+  name: valkey
+  namespace: roboshop
+spec:
+  selector: { app: valkey }
+  ports:
+    - { name: redis, port: 6379, targetPort: 6379 }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: valkey
+  namespace: roboshop
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: valkey }
+  template:
+    metadata:
+      labels: { app: valkey }
+    spec:
+      enableServiceLinks: false
+      containers:
+        - name: valkey
+          image: valkey/valkey:8.0
+          ports:
+            - { containerPort: 6379 }
+          readinessProbe:
+            exec:
+              command: ["valkey-cli", "ping"]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests: { cpu: 50m,  memory: 64Mi }
+            limits:   { cpu: 500m, memory: 256Mi }

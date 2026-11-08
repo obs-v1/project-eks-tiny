@@ -1,0 +1,3 @@
+CREATE USER IF NOT EXISTS 'catalogue'@'%' IDENTIFIED BY 'RoboShop@1';
+GRANT ALL PRIVILEGES ON catalogue.* TO 'catalogue'@'%';
+FLUSH PRIVILEGES;
