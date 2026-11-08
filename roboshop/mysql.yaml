@@ -1,0 +1,75 @@
+# MySQL 8.0 for Roboshop. The DB schema + master data are loaded from the `roboshop-db-init`
+# ConfigMap (created by `make deploy` from ./db/*.sql) mounted at /docker-entrypoint-initdb.d, and
+# the official image runs them against MYSQL_DATABASE on first boot (mirrors the app's docker-compose).
+apiVersion: v1
+kind: Secret
+metadata:
+  name: roboshop-db
+  namespace: roboshop
+type: Opaque
+stringData:
+  MYSQL_ROOT_PASSWORD: "RoboShop@1"
+  MYSQL_DATABASE: "roboshop"
+  MYSQL_USER: "roboshop"
+  MYSQL_PASSWORD: "RoboShop@1"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+  namespace: roboshop
+spec:
+  clusterIP: None
+  selector:
+    app: mysql
+  ports:
+    - { name: mysql, port: 3306, targetPort: 3306 }
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysql
+  namespace: roboshop
+spec:
+  serviceName: mysql
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      enableServiceLinks: false
+      containers:
+        - name: mysql
+          image: mysql:8.0
+          envFrom:
+            - secretRef: { name: roboshop-db }
+          ports:
+            - { containerPort: 3306 }
+          volumeMounts:
+            - { name: data, mountPath: /var/lib/mysql }
+            - { name: init, mountPath: /docker-entrypoint-initdb.d }
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "mysqladmin ping -h 127.0.0.1 -uroot -p$MYSQL_ROOT_PASSWORD"]
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          resources:
+            requests: { cpu: 100m, memory: 512Mi }
+            limits:   { cpu: "1",  memory: 1Gi }
+      volumes:
+        - name: init
+          configMap:
+            name: roboshop-db-init
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: gp3
+        resources:
+          requests:
+            storage: 5Gi

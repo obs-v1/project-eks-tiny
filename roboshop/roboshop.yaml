@@ -1,0 +1,78 @@
+# Roboshop monolith (Spring Boot). Observability wiring:
+#  - TRACES : the OpenTelemetry Java agent (baked into the image) exports OTLP to the obs collector.
+#  - METRICS: Actuator /actuator/prometheus, discovered by the node agent via the scrape annotations.
+#  - LOGS   : JSON to stdout (logback), tailed by the node agent; carries the agent-injected trace_id.
+# ${ROBOSHOP_IMAGE} is substituted by `make deploy` (IMAGE=public.ecr.aws/<alias>/roboshop-monolith:1.0.0).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: roboshop
+  namespace: roboshop
+  labels:
+    app: roboshop
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: roboshop
+  template:
+    metadata:
+      labels:
+        app: roboshop
+        log_format: json
+      annotations:
+        # The node agent's Prometheus receiver discovers /metrics via these (keeps ns roboshop).
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/actuator/prometheus"
+        prometheus.io/port: "8080"
+    spec:
+      # Stop k8s injecting MYSQL_PORT=tcp://… service-link env that clobbers app config.
+      enableServiceLinks: false
+      containers:
+        - name: roboshop
+          image: ${ROBOSHOP_IMAGE}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - { containerPort: 8080 }
+          env:
+            - { name: MYSQL_HOST, value: "mysql.roboshop.svc.cluster.local" }
+            - { name: MYSQL_USER, value: "roboshop" }
+            - name: MYSQL_PASSWORD
+              valueFrom: { secretKeyRef: { name: roboshop-db, key: MYSQL_PASSWORD } }
+            # MySQL entrypoint already loaded schema+data, so the app must not re-run its SQL init.
+            - { name: SQL_INIT_MODE, value: "never" }
+            # ---- OpenTelemetry Java agent config ----
+            # traces → OTLP push to the cross-cluster collector; metrics come from the scrape (none
+            # here to avoid duplicates); logs go to stdout for the tail pipeline (none here).
+            - { name: OTEL_SERVICE_NAME, value: "roboshop-monolith" }
+            - { name: OTEL_EXPORTER_OTLP_ENDPOINT, value: "http://otel-collector.obs.internal:4317" }
+            - { name: OTEL_EXPORTER_OTLP_PROTOCOL, value: "grpc" }
+            - { name: OTEL_TRACES_EXPORTER, value: "otlp" }
+            - { name: OTEL_METRICS_EXPORTER, value: "none" }
+            - { name: OTEL_LOGS_EXPORTER, value: "none" }
+            - { name: OTEL_RESOURCE_ATTRIBUTES, value: "service.namespace=roboshop,deployment.environment=training" }
+          readinessProbe:
+            httpGet: { path: /actuator/health/readiness, port: 8080 }
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 30   # Spring Boot + agent + WAR cold start can be slow
+          livenessProbe:
+            httpGet: { path: /actuator/health/liveness, port: 8080 }
+            initialDelaySeconds: 90
+            periodSeconds: 15
+          resources:
+            requests: { cpu: 250m, memory: 512Mi }
+            limits:   { cpu: "1",  memory: 1Gi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: roboshop
+  namespace: roboshop
+  labels:
+    app: roboshop
+spec:
+  selector:
+    app: roboshop
+  ports:
+    - { name: http, port: 8080, targetPort: 8080 }

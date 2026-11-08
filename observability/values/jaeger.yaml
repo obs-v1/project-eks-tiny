@@ -1,0 +1,11 @@
+# Jaeger v2 (chart 4.x) — a single OTel-Collector-based binary, in-memory storage.
+# v2 is one Deployment + one Service named `jaeger`, exposing OTLP (:4317/:4318) and the
+# query UI (:16686) by default. (The old v1 allInOne/collector/query/agent split is gone.)
+fullnameOverride: jaeger
+
+jaeger:
+  enabled: true
+  replicas: 1
+
+storage:
+  type: memory
