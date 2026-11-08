@@ -62,50 +62,34 @@ ifdef TAG
 APP_ARGS += TAG=$(TAG)
 endif
 
-# Round-1 observed app = Roboshop (small). Build the image on a Docker host first
-# (make -C roboshop build ALIAS=<your-ecr-public-alias>), then pass that image here.
-ROBOSHOP_ARGS = CTX=obs-v1-bankobs
+# Round-1 observed app = Roboshop. The image is PREBUILT and PUBLIC, so `make up` needs no build
+# and NO license. Override ROBOSHOP_IMAGE only if you push your own build.
+ROBOSHOP_IMAGE ?= public.ecr.aws/w8x4g9h7/roboshop-monolith:1.0.0
+ROBOSHOP_ARGS = CTX=obs-v1-bankobs IMAGE=$(ROBOSHOP_IMAGE)
 ifdef DOMAIN
 ROBOSHOP_ARGS += DOMAIN=$(DOMAIN)
-endif
-ifdef ROBOSHOP_IMAGE
-ROBOSHOP_ARGS += IMAGE=$(ROBOSHOP_IMAGE)
 endif
 
 # The layers are strictly ordered (the obs/app layers need the clusters + kubeconfig the cluster
 # layer produces), so never let `make -j` interleave them.
 .NOTPARALLEL:
-.PHONY: up up-roboshop all cluster observability app roboshop plan kubeconfig \
-        destroy destroy-app destroy-observability destroy-cluster check-up check-roboshop help
+.PHONY: up up-roboshop all cluster observability roboshop plan kubeconfig \
+        destroy destroy-roboshop destroy-observability destroy-cluster check-up help
 
 help:
-	@echo "project-eks — targets:"
-	@echo "  make up-roboshop ROBOSHOP_IMAGE=…  ROUND-1: cluster(t3) → observability → Roboshop (small app)"
-	@echo "  make up          full stack with the 60-service BankObs app"
-	@echo "  make destroy     tear down all three (app → observability → cluster)"
-	@echo "  make cluster | observability | app | roboshop     run one layer on its own"
+	@echo "project-eks-tiny (round-1) — targets:"
+	@echo "  make up          cluster (t3 Spot) → observability → Roboshop (small app). No license needed."
+	@echo "  make destroy     tear down all (roboshop → observability → cluster)"
+	@echo "  make cluster | observability | roboshop     run one layer on its own"
 	@echo "  make plan        terraform plan for the cluster layer"
 	@echo "  make kubeconfig  point kubectl at both clusters"
-	@echo "  see the header of this Makefile for the inputs each target needs"
+	@echo "  Inputs for up:   ZONE_ID, DOMAIN, ACM_ARN  (ROBOSHOP_IMAGE is prebuilt/public by default)"
 
 all: up
 
-# ── Bring up: cluster first (it also runs `make kubeconfig`), then the obs stack, then BankObs ──
+# ── Bring up (ROUND-1): cluster (t3 Spot, runs `make kubeconfig`) → obs stack → Roboshop.
+#    No license, no image build — the Roboshop image is prebuilt and public. ──
 up: check-up
-	@echo "═══ 1/3  cluster (Terraform: VPCs, peering, 2 EKS, addons) ═══"
-	$(MAKE) -C cluster apply $(CLUSTER_ARGS)
-	@echo "═══ 2/3  observability (Collector, kube-prometheus-stack, Loki, Jaeger, Pyroscope, agent) ═══"
-	$(MAKE) -C observability all $(OBS_ARGS)
-	@echo "═══ 3/3  app (BankObs platform + services + frontend) ═══"
-	$(MAKE) -C app all $(APP_ARGS)
-	@echo ""
-	@echo "  ✓ project-eks is up."
-	@echo "    UIs:   https://grafana.$(DOMAIN)   https://jaeger.$(DOMAIN)   https://prometheus.$(DOMAIN)"
-	@echo "    App:   https://bankobs.$(DOMAIN)"
-
-# ── Round-1 bring-up: same infra on t3 Spot, observed app = Roboshop (small). Build the image
-#    first on a Docker host:  make -C roboshop build ALIAS=<your-ecr-public-alias> ──
-up-roboshop: check-roboshop
 	@echo "═══ 1/3  cluster (Terraform: VPCs, peering, 2 EKS on t3 Spot, addons) ═══"
 	$(MAKE) -C cluster apply $(CLUSTER_ARGS)
 	@echo "═══ 2/3  observability (Collector, kube-prometheus-stack, Loki, Jaeger, Pyroscope, agent) ═══"
@@ -117,21 +101,16 @@ up-roboshop: check-roboshop
 	@echo "    UIs:   https://grafana.$(DOMAIN)   https://jaeger.$(DOMAIN)   https://prometheus.$(DOMAIN)"
 	@echo "    App:   https://roboshop.$(DOMAIN)"
 
-# Deploy just the Roboshop layer (image must already be built & pushed — see roboshop/Makefile).
+up-roboshop: up   ## alias — in tiny, round-1 is the default `up`
+
+# Deploy just the Roboshop layer (cluster + obs already up).
 roboshop:
 	$(MAKE) -C roboshop deploy $(ROBOSHOP_ARGS)
-
-check-roboshop:
-	@test -n "$(ZONE_ID)"         || { echo "ERROR: ZONE_ID required (your public hosted-zone id)"; exit 1; }
-	@test -n "$(DOMAIN)"          || { echo "ERROR: DOMAIN required (e.g. lab.example.com)"; exit 1; }
-	@test -n "$(ACM_ARN)"         || { echo "ERROR: ACM_ARN required (wildcard cert for *.$(DOMAIN))"; exit 1; }
-	@test -n "$(ROBOSHOP_IMAGE)"  || { echo "ERROR: ROBOSHOP_IMAGE required (build first: make -C roboshop build ALIAS=<your-ecr-public-alias>)"; exit 1; }
 
 check-up:
 	@test -n "$(ZONE_ID)"  || { echo "ERROR: ZONE_ID required (your public hosted-zone id)"; exit 1; }
 	@test -n "$(DOMAIN)"   || { echo "ERROR: DOMAIN required (e.g. lab.example.com)"; exit 1; }
 	@test -n "$(ACM_ARN)"  || { echo "ERROR: ACM_ARN required (wildcard cert for *.$(DOMAIN))"; exit 1; }
-	@test -n "$(LICENSE_KEY)" -o -f app/.env || { echo "ERROR: LICENSE_KEY required (pass it, or put LICENSE_KEY=... in app/.env)"; exit 1; }
 
 # ── Individual layers (same forwarded inputs; run any one standalone) ──
 cluster:
@@ -153,12 +132,12 @@ kubeconfig:
 # cluster layer has fewer NLBs to reap); the cluster layer then does the full LB/DNS/EBS/log-group
 # cleanup and destroys the infra. app/obs are best-effort (`-`) so a hiccup there never blocks the
 # cluster teardown, which is what frees the expensive resources. ──
-destroy: destroy-app destroy-observability destroy-cluster
+destroy: destroy-roboshop destroy-observability destroy-cluster
 	@echo ""
-	@echo "  ✓ project-eks torn down."
+	@echo "  ✓ project-eks-tiny torn down."
 
-destroy-app:
-	-$(MAKE) -C app destroy $(APP_ARGS)
+destroy-roboshop:
+	-$(MAKE) -C roboshop destroy $(ROBOSHOP_ARGS)
 
 destroy-observability:
 	-$(MAKE) -C observability destroy $(OBS_ARGS)
