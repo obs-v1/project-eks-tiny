@@ -1,7 +1,7 @@
 # RoboShop Microservices on EKS — observed app (round-2)
 
 The round-2 observed application for `project-eks-tiny`: the full **RoboShop microservices** app
-(9 services across 5 languages + 4 datastores) deployed to the app cluster **`obs-v1-bankobs`** in
+(9 services across 5 languages + 4 datastores) deployed to the app cluster **`obs-v1-roboshop`** in
 namespace **`roboshop`**, fully instrumented so every request shows up as **traces + metrics + logs**
 in the observability cluster.
 

@@ -1,5 +1,5 @@
 # A dedicated INTERNAL NLB for OTLP ingest. external-dns publishes its address as
-# ${COLLECTOR_HOST} into the private zone, so BankObs (other VPC) reaches it over
+# ${COLLECTOR_HOST} into the private zone, so the app cluster (other VPC) reaches it over
 # the peering at otel-collector.obs.internal:4317 — never the public internet.
 apiVersion: v1
 kind: Service
@@ -23,9 +23,9 @@ metadata:
     external-dns.kubernetes.io/hostname: "${COLLECTOR_HOST}"
 spec:
   type: LoadBalancer
-  # Accept OTLP only from the two lab VPC CIDRs (obs locally + bankobs over the peering).
+  # Accept OTLP only from the two lab VPC CIDRs (obs locally + the app VPC over the peering).
   # The in-tree provider turns these into node-SG ingress rules, which is what lets the
-  # cross-VPC agent reach 4317. Keep in sync with obs_vpc_cidr / bankobs_vpc_cidr.
+  # cross-VPC agent reach 4317. Keep in sync with obs_vpc_cidr / roboshop_vpc_cidr.
   loadBalancerSourceRanges:
     - 10.10.0.0/16
     - 10.20.0.0/16

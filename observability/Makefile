@@ -7,7 +7,7 @@
 #
 #  Inputs:
 #    DOMAIN          public base domain for the UI hosts (grafana.$DOMAIN, …)   [required for `ingress`]
-#    COLLECTOR_HOST  private name BankObs pushes OTLP to    [default otel-collector.obs.internal]
+#    COLLECTOR_HOST  private name the app pushes OTLP to    [default otel-collector.obs.internal]
 #    CONTEXT         kube context of the OBS cluster        [default obs-v1-observability]
 # ─────────────────────────────────────────────────────────────────────────────
 NS             ?= monitoring
@@ -20,17 +20,17 @@ H  = helm --kube-context $(CONTEXT) upgrade --install
 K  = kubectl --context $(CONTEXT)
 HN = -n $(NS)
 
-AGENT_CTX ?= obs-v1-bankobs   # the agent runs IN the bankobs cluster
+AGENT_CTX ?= obs-v1-roboshop   # the agent runs IN the app cluster
 
 .PHONY: repos ensure-context namespace all otel-collector kube-prometheus-stack loki jaeger pyroscope pyrra ingress collector-lb agent destroy
 
-# Collector agent in the BANKOBS cluster: scrapes /metrics + tails logs locally and forwards
+# Collector agent in the APP cluster: scrapes /metrics + tails logs locally and forwards
 # them by OTLP to the central collector across the peering. (Deploy after the obs stack.)
 agent: repos
 	@kubectl config get-contexts $(AGENT_CTX) >/dev/null 2>&1 || aws eks update-kubeconfig --region $(REGION) --name $(AGENT_CTX) --alias $(AGENT_CTX) >/dev/null
-	helm --kube-context $(AGENT_CTX) upgrade --install bankobs-agent open-telemetry/opentelemetry-collector \
+	helm --kube-context $(AGENT_CTX) upgrade --install roboshop-agent open-telemetry/opentelemetry-collector \
 	  --version 0.178.1 -n monitoring --create-namespace -f agent/values-agent.yaml
-	@echo "  ✓ bankobs-agent deployed to $(AGENT_CTX) (metrics scrape + logs tail → obs collector)."
+	@echo "  ✓ roboshop-agent deployed to $(AGENT_CTX) (metrics scrape + logs tail → obs collector)."
 
 repos:
 	helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
@@ -48,7 +48,7 @@ namespace: ensure-context
 	$(K) create namespace $(NS) --dry-run=client -o yaml | $(K) apply -f -
 
 # Order: Prometheus Operator CRDs first (kps), then backends, then collector, then pyrra, then
-# edges, then the agent in the bankobs cluster (scrapes bankobs → forwards to this collector).
+# edges, then the agent in the app cluster (scrapes roboshop → forwards to this collector).
 all: repos namespace kube-prometheus-stack loki jaeger pyroscope otel-collector pyrra collector-lb ingress agent
 	@echo ""; echo "  ✓ observability stack deployed to $(CONTEXT) + agent to $(AGENT_CTX)."
 

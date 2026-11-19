@@ -3,7 +3,7 @@
 
 external-dns runs with --policy=upsert-only, so it never removes its own records when the
 clusters are torn down — grafana/jaeger/prometheus/alertmanager/pyroscope.<domain> and
-bankobs.<domain> (plus their TXT registry records) would otherwise linger in your domain's
+roboshop.<domain> (plus their TXT registry records) would otherwise linger in your domain's
 zone forever. This removes ONLY the records external-dns owns, identified by the
 `external-dns/owner=<cluster>` tag in its TXT registry records, so any other DNS you keep in
 that zone is never touched. (The private obs.internal zone is handled separately by
@@ -14,7 +14,7 @@ force_destroy on the Terraform-managed zone, so it is not this script's concern.
 the zone id and owner(s) explicitly:
 
   python3 cleanup-external-dns-records.py --zone-id Z09... \
-      --owner obs-v1-observability --owner obs-v1-bankobs [--dry-run]
+      --owner obs-v1-observability --owner obs-v1-roboshop [--dry-run]
 """
 import argparse
 import json

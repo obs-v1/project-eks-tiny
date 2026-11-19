@@ -2,7 +2,7 @@
 #  roboshop-microservices — round-2 observed app for project-eks-tiny (EKS).
 #
 #  9 instrumented services (5 languages) + 4 datastores, deployed to the app cluster
-#  (obs-v1-bankobs) in namespace `roboshop`, meeting the full observability standard:
+#  (obs-v1-roboshop) in namespace `roboshop`, meeting the full observability standard:
 #    traces  → OTLP push to otel-collector.obs.internal:4317
 #    metrics → /metrics (or /actuator/prometheus) scraped by the node agent
 #    logs    → JSON to stdout, tailed by the node agent → Loki (carry trace_id)
@@ -15,7 +15,7 @@
 # ─────────────────────────────────────────────────────────────────────────────
 REG     ?= public.ecr.aws/w8x4g9h7/roboshop-v3
 TAG     ?= 1.0.0
-CTX     ?= obs-v1-bankobs
+CTX     ?= obs-v1-roboshop
 NS      ?= roboshop
 REGION  ?= us-east-1
 DOMAIN  ?=

@@ -27,7 +27,7 @@ targets exist for every component (`make loki`, `make jaeger`, …).
 ## Cross-VPC ingest
 
 `make collector-lb` creates an **internal** NLB and external-dns publishes it as
-`otel-collector.obs.internal` into the shared private zone. BankObs (other VPC) sends OTLP there over
+`otel-collector.obs.internal` into the shared private zone. The app cluster (other VPC) sends OTLP there over
 the peering — never the public internet. Override the name with `COLLECTOR_HOST=…` if you changed
 `private_dns_domain` in `../cluster`.
 
@@ -36,5 +36,5 @@ the peering — never the public internet. Override the name with `COLLECTOR_HOS
 `make ingress DOMAIN=…` publishes `grafana.<DOMAIN>`, `jaeger.<DOMAIN>`, `prometheus.<DOMAIN>`,
 `alertmanager.<DOMAIN>`, `pyroscope.<DOMAIN>` via Traefik (TLS at the NLB, records via external-dns).
 
-> The sample Pyrra SLO (`pyrra/slo.yaml`) targets `demo-app` — point it at a real bankobs metric
+> The sample Pyrra SLO (`pyrra/slo.yaml`) targets `demo-app` — point it at a real roboshop metric
 > once the app is up.

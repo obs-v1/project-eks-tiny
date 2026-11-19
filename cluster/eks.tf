@@ -59,12 +59,12 @@ module "eks_observability" {
   tags = local.tags
 }
 
-# ── EKS: bankobs cluster ─────────────────────────────────────────────────────
-module "eks_bankobs" {
+# ── EKS: roboshop cluster ─────────────────────────────────────────────────────
+module "eks_roboshop" {
   source  = "terraform-aws-modules/eks/aws"
   version = "~> 21.0"
 
-  name               = local.bankobs_cluster_name
+  name               = local.roboshop_cluster_name
   kubernetes_version = var.eks_version
 
   # Let EKS own the /aws/eks/<name>/cluster log group (see the observability cluster above).
@@ -91,8 +91,8 @@ module "eks_bankobs" {
     }
   }
 
-  vpc_id     = module.vpc_bankobs.vpc_id
-  subnet_ids = module.vpc_bankobs.private_subnets
+  vpc_id     = module.vpc_roboshop.vpc_id
+  subnet_ids = module.vpc_roboshop.private_subnets
 
   addons = {
     coredns    = { most_recent = true }
@@ -102,12 +102,12 @@ module "eks_bankobs" {
 
   eks_managed_node_groups = {
     spot = {
-      instance_types = var.bankobs_node_instance_types
+      instance_types = var.roboshop_node_instance_types
       capacity_type  = "SPOT"
-      min_size       = var.bankobs_node_scaling.min
-      max_size       = var.bankobs_node_scaling.max
-      desired_size   = var.bankobs_node_scaling.desired
-      labels         = { role = "bankobs" }
+      min_size       = var.roboshop_node_scaling.min
+      max_size       = var.roboshop_node_scaling.max
+      desired_size   = var.roboshop_node_scaling.desired
+      labels         = { role = "roboshop" }
     }
   }
 

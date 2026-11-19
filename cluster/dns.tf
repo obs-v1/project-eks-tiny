@@ -14,7 +14,7 @@ resource "aws_route53_zone" "private" {
     vpc_id = module.vpc_observability.vpc_id
   }
   vpc {
-    vpc_id = module.vpc_bankobs.vpc_id
+    vpc_id = module.vpc_roboshop.vpc_id
   }
 
   # external-dns manages records in here; ignore drift on the association set.

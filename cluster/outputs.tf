@@ -12,8 +12,8 @@ output "public_hosted_zone_id" {
   value = var.public_hosted_zone_id
 }
 
-output "bankobs_cluster_name" {
-  value = module.eks_bankobs.cluster_name
+output "roboshop_cluster_name" {
+  value = module.eks_roboshop.cluster_name
 }
 
 output "observability_kubeconfig_command" {
@@ -21,12 +21,12 @@ output "observability_kubeconfig_command" {
   value       = "aws eks update-kubeconfig --region ${var.aws_region} --name ${module.eks_observability.cluster_name} --alias ${module.eks_observability.cluster_name}"
 }
 
-output "bankobs_kubeconfig_command" {
-  value = "aws eks update-kubeconfig --region ${var.aws_region} --name ${module.eks_bankobs.cluster_name} --alias ${module.eks_bankobs.cluster_name}"
+output "roboshop_kubeconfig_command" {
+  value = "aws eks update-kubeconfig --region ${var.aws_region} --name ${module.eks_roboshop.cluster_name} --alias ${module.eks_roboshop.cluster_name}"
 }
 
 output "collector_otlp_endpoint" {
-  description = "Private OTLP endpoint BankObs sends telemetry to (resolves in both VPCs over the peering)."
+  description = "Private OTLP endpoint RoboShop sends telemetry to (resolves in both VPCs over the peering)."
   value       = "http://${local.collector_fqdn}:4317"
 }
 
@@ -46,10 +46,10 @@ output "observability_vpc_id" {
   value = module.vpc_observability.vpc_id
 }
 
-output "bankobs_vpc_id" {
-  value = module.vpc_bankobs.vpc_id
+output "roboshop_vpc_id" {
+  value = module.vpc_roboshop.vpc_id
 }
 
 output "vpc_peering_connection_id" {
-  value = aws_vpc_peering_connection.obs_bankobs.id
+  value = aws_vpc_peering_connection.obs_roboshop.id
 }

@@ -1,6 +1,6 @@
 # ── Required inputs the student supplies (via tfvars or the Makefile) ─────────
 variable "public_hosted_zone_id" {
-  description = "Route53 PUBLIC hosted zone ID for the UI hostnames (grafana.<domain>, bankobs.<domain>, …)."
+  description = "Route53 PUBLIC hosted zone ID for the UI hostnames (grafana.<domain>, roboshop.<domain>, …)."
   type        = string
 }
 
@@ -35,13 +35,13 @@ variable "eks_version" {
 
 # ── Networking ────────────────────────────────────────────────────────────────
 variable "obs_vpc_cidr" {
-  description = "CIDR for the observability VPC (must not overlap the bankobs VPC — they are peered)."
+  description = "CIDR for the observability VPC (must not overlap the roboshop VPC — they are peered)."
   type        = string
   default     = "10.10.0.0/16"
 }
 
-variable "bankobs_vpc_cidr" {
-  description = "CIDR for the bankobs VPC."
+variable "roboshop_vpc_cidr" {
+  description = "CIDR for the roboshop VPC."
   type        = string
   default     = "10.20.0.0/16"
 }
@@ -86,17 +86,17 @@ variable "obs_node_scaling" {
   default     = { min = 2, desired = 3, max = 6 }
 }
 
-variable "bankobs_node_instance_types" {
+variable "roboshop_node_instance_types" {
   description = "Instance types for the app cluster's Spot node group (round-1: small single app)."
-  # Round-1 runs the small Roboshop monolith + MySQL (not the 60-svc BankObs), so t3.xlarge
+  # Round-1 runs the small Roboshop monolith + MySQL (not the 60-svc RoboShop), so t3.xlarge
   # (4 vCPU/16 GB) is plenty and cheap; t3a adds Spot-pool diversity.
   type    = list(string)
   default = ["t3.xlarge", "t3a.xlarge"]
 }
 
-variable "bankobs_node_scaling" {
+variable "roboshop_node_scaling" {
   description = "min/desired/max for the app cluster's Spot node group."
-  # Shrunk for round-1 (Roboshop+MySQL is tiny vs 60 BankObs services).
+  # Shrunk for round-1 (Roboshop+MySQL is tiny vs 60 RoboShop services).
   type    = object({ min = number, desired = number, max = number })
   default = { min = 1, desired = 2, max = 4 }
 }

@@ -10,7 +10,7 @@
 #
 #  Inputs:  ALIAS (your ecr-public registry alias) · IMAGE · DOMAIN · CTX · NS · APPDIR
 # ─────────────────────────────────────────────────────────────────────────────
-CTX    ?= obs-v1-bankobs
+CTX    ?= obs-v1-roboshop
 NS     ?= roboshop
 REGION ?= us-east-1
 DOMAIN ?=

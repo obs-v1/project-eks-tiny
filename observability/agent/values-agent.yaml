@@ -1,17 +1,17 @@
-# bankobs-cluster collector AGENT (runs in the bankobs cluster, context obs-v1-bankobs).
+# app-cluster collector AGENT (runs in the app cluster, context obs-v1-roboshop).
 #
-# BankObs apps OTLP-export TRACES only; metrics come from /metrics (scrape) and logs from
+# RoboShop apps OTLP-export TRACES only; metrics come from /metrics (scrape) and logs from
 # stdout (tail) — both SAME-cluster mechanisms. The central obs collector is in another VPC and
 # cannot do either. So this node agent scrapes + tails LOCALLY and forwards everything by OTLP,
 # over the VPC peering, to otel-collector.obs.internal — which fans it to Prometheus / Loki.
 #
-#   bankobs pods ─/metrics (scrape)─┐
+#   roboshop pods ─/metrics (scrape)─┐
 #   node pod logs ─(tail/filelog)───┤─▶ [ this agent ] ─OTLP(private)─▶ obs collector ─▶ Prom/Loki
 #
 # DaemonSet because filelog reads node-local pod logs. Image tag omitted so it matches the
 # chart appVersion (a newer binary rejects the telemetry config the chart injects).
 mode: daemonset
-fullnameOverride: bankobs-agent
+fullnameOverride: roboshop-agent
 
 image:
   repository: otel/opentelemetry-collector-contrib
@@ -37,16 +37,16 @@ resources:
 
 config:
   receivers:
-    # Scrape every bankobs pod that carries the prometheus.io/scrape annotation (the charts add it).
+    # Scrape every roboshop pod that carries the prometheus.io/scrape annotation (the charts add it).
     prometheus:
       config:
         scrape_configs:
-          - job_name: bankobs-pods
+          - job_name: roboshop-pods
             scrape_interval: 15s
             kubernetes_sd_configs:
               - role: pod
             relabel_configs:
-              - { source_labels: [__meta_kubernetes_namespace], action: keep, regex: "bankobs|roboshop" }
+              - { source_labels: [__meta_kubernetes_namespace], action: keep, regex: "roboshop" }
               # Scrape only this node's pods (the collector expands ${env:NODE_NAME} at startup).
               - source_labels: [__meta_kubernetes_pod_node_name]
                 action: keep

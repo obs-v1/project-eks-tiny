@@ -5,10 +5,10 @@ Provisions the whole foundation:
 - **Two VPCs** (non-overlapping CIDRs) — one per cluster.
 - **Two EKS clusters** (public API endpoint, so you can `kubectl` from anywhere):
   - `obs-v1-observability` — runs the monitoring stack.
-  - `obs-v1-bankobs` — runs the app.
+  - `obs-v1-roboshop` — runs the app.
 - **Spot managed node groups**, each with a diversified instance set so a single Spot
   pool interruption can't drain the cluster, plus **Cluster Autoscaler**.
-- **VPC peering** + a **shared Route53 private zone** (`obs.internal`) so BankObs reaches
+- **VPC peering** + a **shared Route53 private zone** (`obs.internal`) so RoboShop reaches
   the observability Collector at `otel-collector.obs.internal:4317` **privately** — telemetry
   never leaves the two VPCs.
 - Per-cluster addons: **EBS CSI** (gp3 default StorageClass), **external-dns**, **Traefik**
@@ -36,7 +36,7 @@ Tear down with `make destroy` (same vars).
 
 - `../observability` deploys the stack to the **observability** cluster and exposes the
   Collector on an **internal** NLB that external-dns publishes as `otel-collector.obs.internal`.
-- `../app` deploys **BankObs** to the **bankobs** cluster, pointing its OTLP exporter at that
-  private endpoint, and the `web-portal` frontend at `bankobs.<DOMAIN>` via Traefik.
+- `../app` deploys **RoboShop** to the **roboshop** cluster, pointing its OTLP exporter at that
+  private endpoint, and the `web-portal` frontend at `roboshop.<DOMAIN>` via Traefik.
 
 > State is **local** by default. For a shared/CI setup, add an S3 backend in `versions.tf`.

@@ -10,5 +10,5 @@ acm_certificate_arn   = "arn:aws:acm:us-east-1:111122223333:certificate/abcd-...
 # eks_version        = "1.31"
 # private_dns_domain = "obs.internal"
 # obs_vpc_cidr       = "10.10.0.0/16"
-# bankobs_vpc_cidr   = "10.20.0.0/16"
+# roboshop_vpc_cidr   = "10.20.0.0/16"
 # public_api_access_cidrs = ["0.0.0.0/0"]   # tighten to your office IP if you prefer

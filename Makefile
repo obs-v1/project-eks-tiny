@@ -1,31 +1,28 @@
 # ─────────────────────────────────────────────────────────────────────────────
-#  project-eks — one entry point for the whole lab
+#  project-eks-tiny — one entry point for the whole lab
 #
-#  Orchestrates the three component Makefiles in dependency order:
-#    cluster/        (Terraform: 2 VPCs + peering + private zone + 2 EKS + addons)
-#    observability/  (Helm: Collector, kube-prometheus-stack, Loki, Jaeger, Pyroscope, Pyrra, agent)
-#    app/            (BankObs: platform StatefulSets + 60 service charts + frontend)
+#  Orchestrates the component layers in dependency order:
+#    cluster/                (Terraform: 2 VPCs + peering + private zone + 2 EKS on t3 Spot + addons)
+#    observability/          (Helm: Collector, kube-prometheus-stack, Loki, Jaeger, Pyroscope, agent)
+#    roboshop-microservices/ (the observed app: 9 services / 5 languages + 4 datastores, instrumented)
 #
-#  Bring everything up (single command):
+#  Bring everything up (single command — NO license, images are prebuilt & public):
 #    make up ZONE_ID=Z0123... DOMAIN=lab.example.com \
-#            ACM_ARN=arn:aws:acm:us-east-1:111122223333:certificate/abcd \
-#            LICENSE_KEY=eyJ...
+#            ACM_ARN=arn:aws:acm:us-east-1:111122223333:certificate/abcd
 #
 #  Tear everything down (reverse order; cluster step also clears LBs, DNS, EBS, log groups):
 #    make destroy ZONE_ID=... DOMAIN=... ACM_ARN=...
 #
 #  Run one layer on its own (same inputs, forwarded to that child only):
-#    make cluster ...   |   make observability DOMAIN=...   |   make app LICENSE_KEY=... DOMAIN=...
+#    make cluster ...   |   make observability DOMAIN=...   |   make roboshop DOMAIN=...
 #
 #  Inputs (a child only receives the ones it uses; omit one and that child keeps its own default):
 #    ZONE_ID       public hosted-zone id            → cluster           [required for up/destroy]
 #    DOMAIN        public base domain               → cluster, obs, app [required for up]
 #    ACM_ARN       wildcard ACM cert arn for *.DOMAIN → cluster         [required for up/destroy]
-#    LICENSE_KEY   bankobs license (or put it in app/.env)   → app      [required for up]
 #    ADMIN_ARN     extra cluster-admin principal    → cluster           [optional]
-#    COLLECTOR_HOST private OTLP name BankObs pushes to → obs           [optional]
-#    ECR · TAG     bankobs image registry + tag     → app              [optional]
-#    REGION        AWS region (default us-east-1)    → all three
+#    COLLECTOR_HOST private OTLP name the app pushes to → obs           [optional]
+#    REGION        AWS region (default us-east-1)    → all layers
 # ─────────────────────────────────────────────────────────────────────────────
 REGION ?= us-east-1
 
@@ -52,60 +49,38 @@ endif
 ifdef COLLECTOR_HOST
 OBS_ARGS += COLLECTOR_HOST=$(COLLECTOR_HOST)
 endif
-ifdef LICENSE_KEY
-APP_ARGS += LICENSE_KEY=$(LICENSE_KEY)
-endif
-ifdef ECR
-APP_ARGS += ECR=$(ECR)
-endif
-ifdef TAG
-APP_ARGS += TAG=$(TAG)
-endif
-
-# Round-1 observed app = Roboshop. The image is PREBUILT and PUBLIC, so `make up` needs no build
-# and NO license. Override ROBOSHOP_IMAGE only if you push your own build.
-ROBOSHOP_IMAGE ?= public.ecr.aws/w8x4g9h7/roboshop-monolith:1.0.0
-ROBOSHOP_ARGS = CTX=obs-v1-bankobs IMAGE=$(ROBOSHOP_IMAGE)
-ifdef DOMAIN
-ROBOSHOP_ARGS += DOMAIN=$(DOMAIN)
-endif
 
 # The layers are strictly ordered (the obs/app layers need the clusters + kubeconfig the cluster
 # layer produces), so never let `make -j` interleave them.
 .NOTPARALLEL:
-.PHONY: up up-roboshop all cluster observability roboshop plan kubeconfig \
+.PHONY: up all cluster observability roboshop load load-stop plan kubeconfig \
         destroy destroy-roboshop destroy-observability destroy-cluster check-up help
 
 help:
-	@echo "project-eks-tiny (round-1) — targets:"
-	@echo "  make up          cluster (t3 Spot) → observability → Roboshop (small app). No license needed."
+	@echo "project-eks-tiny — targets:"
+	@echo "  make up          cluster (t3 Spot) → observability → RoboShop microservices. No license needed."
 	@echo "  make destroy     tear down all (roboshop → observability → cluster)"
 	@echo "  make cluster | observability | roboshop     run one layer on its own"
+	@echo "  make load | load-stop     start/stop the k6 end-to-end traffic injector (see roboshop-microservices/)"
 	@echo "  make plan        terraform plan for the cluster layer"
 	@echo "  make kubeconfig  point kubectl at both clusters"
-	@echo "  Inputs for up:   ZONE_ID, DOMAIN, ACM_ARN  (ROBOSHOP_IMAGE is prebuilt/public by default)"
+	@echo "  Inputs for up:   ZONE_ID, DOMAIN, ACM_ARN   (app images are prebuilt & public)"
 
 all: up
 
-# ── Bring up (ROUND-1): cluster (t3 Spot, runs `make kubeconfig`) → obs stack → Roboshop.
-#    No license, no image build — the Roboshop image is prebuilt and public. ──
+# ── Bring up: cluster (t3 Spot, runs `make kubeconfig`) → obs stack → RoboShop microservices.
+#    No license, no image build — the RoboShop images are prebuilt and public. ──
 up: check-up
 	@echo "═══ 1/3  cluster (Terraform: VPCs, peering, 2 EKS on t3 Spot, addons) ═══"
 	$(MAKE) -C cluster apply $(CLUSTER_ARGS)
 	@echo "═══ 2/3  observability (Collector, kube-prometheus-stack, Loki, Jaeger, Pyroscope, agent) ═══"
 	$(MAKE) -C observability all $(OBS_ARGS)
-	@echo "═══ 3/3  roboshop (MySQL + instrumented monolith) ═══"
-	$(MAKE) -C roboshop deploy $(ROBOSHOP_ARGS)
+	@echo "═══ 3/3  roboshop-microservices (datastores + 9 instrumented services + frontend) ═══"
+	$(MAKE) -C roboshop-microservices deploy $(APP_ARGS)
 	@echo ""
-	@echo "  ✓ round-1 is up."
+	@echo "  ✓ project-eks-tiny is up."
 	@echo "    UIs:   https://grafana.$(DOMAIN)   https://jaeger.$(DOMAIN)   https://prometheus.$(DOMAIN)"
-	@echo "    App:   https://roboshop.$(DOMAIN)"
-
-up-roboshop: up   ## alias — in tiny, round-1 is the default `up`
-
-# Deploy just the Roboshop layer (cluster + obs already up).
-roboshop:
-	$(MAKE) -C roboshop deploy $(ROBOSHOP_ARGS)
+	@echo "    App:   https://roboshop.$(DOMAIN)   (generate traffic: make load)"
 
 check-up:
 	@test -n "$(ZONE_ID)"  || { echo "ERROR: ZONE_ID required (your public hosted-zone id)"; exit 1; }
@@ -119,8 +94,14 @@ cluster:
 observability:
 	$(MAKE) -C observability all $(OBS_ARGS)
 
-app:
-	$(MAKE) -C app all $(APP_ARGS)
+roboshop:
+	$(MAKE) -C roboshop-microservices deploy $(APP_ARGS)
+
+# Start/stop the end-to-end traffic injector (k6). See roboshop-microservices/README.md.
+load:
+	$(MAKE) -C roboshop-microservices load
+load-stop:
+	$(MAKE) -C roboshop-microservices load-stop
 
 plan:
 	$(MAKE) -C cluster plan $(CLUSTER_ARGS)
@@ -137,7 +118,7 @@ destroy: destroy-roboshop destroy-observability destroy-cluster
 	@echo "  ✓ project-eks-tiny torn down."
 
 destroy-roboshop:
-	-$(MAKE) -C roboshop destroy $(ROBOSHOP_ARGS)
+	-$(MAKE) -C roboshop-microservices destroy $(APP_ARGS)
 
 destroy-observability:
 	-$(MAKE) -C observability destroy $(OBS_ARGS)

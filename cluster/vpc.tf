@@ -36,17 +36,17 @@ module "vpc_observability" {
   tags = local.tags
 }
 
-# ── BankObs VPC ───────────────────────────────────────────────────────────────
-module "vpc_bankobs" {
+# ── RoboShop VPC ───────────────────────────────────────────────────────────────
+module "vpc_roboshop" {
   source  = "terraform-aws-modules/vpc/aws"
   version = "~> 6.0"
 
-  name = "${local.bankobs_cluster_name}-vpc"
-  cidr = var.bankobs_vpc_cidr
+  name = "${local.roboshop_cluster_name}-vpc"
+  cidr = var.roboshop_vpc_cidr
   azs  = local.azs
 
-  private_subnets = [for i in range(3) : cidrsubnet(var.bankobs_vpc_cidr, 4, i)]
-  public_subnets  = [for i in range(3) : cidrsubnet(var.bankobs_vpc_cidr, 4, i + 8)]
+  private_subnets = [for i in range(3) : cidrsubnet(var.roboshop_vpc_cidr, 4, i)]
+  public_subnets  = [for i in range(3) : cidrsubnet(var.roboshop_vpc_cidr, 4, i + 8)]
 
   enable_nat_gateway   = true
   single_nat_gateway   = true
@@ -54,12 +54,12 @@ module "vpc_bankobs" {
   enable_dns_support   = true
 
   public_subnet_tags = {
-    "kubernetes.io/role/elb"                              = "1"
-    "kubernetes.io/cluster/${local.bankobs_cluster_name}" = "shared"
+    "kubernetes.io/role/elb"                               = "1"
+    "kubernetes.io/cluster/${local.roboshop_cluster_name}" = "shared"
   }
   private_subnet_tags = {
-    "kubernetes.io/role/internal-elb"                     = "1"
-    "kubernetes.io/cluster/${local.bankobs_cluster_name}" = "shared"
+    "kubernetes.io/role/internal-elb"                      = "1"
+    "kubernetes.io/cluster/${local.roboshop_cluster_name}" = "shared"
   }
 
   tags = local.tags

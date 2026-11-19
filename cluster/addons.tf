@@ -18,21 +18,21 @@ module "addons_observability" {
   tags                        = local.tags
 }
 
-# ── Addons on the bankobs cluster ────────────────────────────────────────────
-module "addons_bankobs" {
+# ── Addons on the roboshop cluster ────────────────────────────────────────────
+module "addons_roboshop" {
   source = "./modules/cluster-addons"
 
   providers = {
-    helm       = helm.bankobs
-    kubernetes = kubernetes.bankobs
+    helm       = helm.roboshop
+    kubernetes = kubernetes.roboshop
   }
 
-  cluster_name                = module.eks_bankobs.cluster_name
+  cluster_name                = module.eks_roboshop.cluster_name
   region                      = var.aws_region
-  ebs_csi_role_arn            = module.irsa_bankobs_ebs_csi.arn
-  external_dns_role_arn       = module.irsa_bankobs_external_dns.arn
-  autoscaler_role_arn         = module.irsa_bankobs_autoscaler.arn
-  external_dns_domain_filters = [var.public_domain_name] # only bankobs.<domain>
+  ebs_csi_role_arn            = module.irsa_roboshop_ebs_csi.arn
+  external_dns_role_arn       = module.irsa_roboshop_external_dns.arn
+  autoscaler_role_arn         = module.irsa_roboshop_autoscaler.arn
+  external_dns_domain_filters = [var.public_domain_name] # only roboshop.<domain>
   acm_certificate_arn         = var.acm_certificate_arn
   tags                        = local.tags
 }
@@ -43,8 +43,8 @@ module "addons_bankobs" {
 # (A for_each over these names fails to plan on a fresh apply — the names are only
 #  known after the clusters exist; an unknown attribute VALUE is fine, unknown keys aren't.)
 locals {
-  obs_asg_name     = module.eks_observability.eks_managed_node_groups_autoscaling_group_names[0]
-  bankobs_asg_name = module.eks_bankobs.eks_managed_node_groups_autoscaling_group_names[0]
+  obs_asg_name      = module.eks_observability.eks_managed_node_groups_autoscaling_group_names[0]
+  roboshop_asg_name = module.eks_roboshop.eks_managed_node_groups_autoscaling_group_names[0]
 }
 
 resource "aws_autoscaling_group_tag" "obs_ca_enabled" {
@@ -65,8 +65,8 @@ resource "aws_autoscaling_group_tag" "obs_ca_cluster" {
   }
 }
 
-resource "aws_autoscaling_group_tag" "bankobs_ca_enabled" {
-  autoscaling_group_name = local.bankobs_asg_name
+resource "aws_autoscaling_group_tag" "roboshop_ca_enabled" {
+  autoscaling_group_name = local.roboshop_asg_name
   tag {
     key                 = "k8s.io/cluster-autoscaler/enabled"
     value               = "true"
@@ -74,10 +74,10 @@ resource "aws_autoscaling_group_tag" "bankobs_ca_enabled" {
   }
 }
 
-resource "aws_autoscaling_group_tag" "bankobs_ca_cluster" {
-  autoscaling_group_name = local.bankobs_asg_name
+resource "aws_autoscaling_group_tag" "roboshop_ca_cluster" {
+  autoscaling_group_name = local.roboshop_asg_name
   tag {
-    key                 = "k8s.io/cluster-autoscaler/${local.bankobs_cluster_name}"
+    key                 = "k8s.io/cluster-autoscaler/${local.roboshop_cluster_name}"
     value               = "owned"
     propagate_at_launch = false
   }

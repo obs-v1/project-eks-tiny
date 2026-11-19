@@ -1,5 +1,5 @@
 # OTel Collector (gateway) — the hub for three signals on the observability cluster.
-# BankObs (other VPC) pushes OTLP here over the peering, via otel-collector.obs.internal.
+# The app cluster (other VPC) pushes OTLP here over the peering, via otel-collector.obs.internal.
 mode: deployment
 fullnameOverride: otel-collector
 

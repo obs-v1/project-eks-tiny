@@ -1,5 +1,5 @@
 # ─────────────────────────────────────────────────────────────────────────────
-#  project-eks/cluster — two EKS clusters (observability + bankobs), each in its
+#  project-eks/cluster — two EKS clusters (observability + roboshop), each in its
 #  own VPC, peered, sharing a private DNS zone for in-cluster telemetry ingest.
 #  Provisioned entirely with Terraform. One `terraform apply`.
 # ─────────────────────────────────────────────────────────────────────────────
